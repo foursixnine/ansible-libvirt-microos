@@ -1,0 +1,14 @@
+---
+# defaults file for kvm
+base_image_name: openSUSE-MicroOS.x86_64-ContainerHost-kvm-and-xen.qcow2
+#base_image_url: https://download.fedoraproject.org/pub/fedora/linux/releases/34/Cloud/x86_64/images/{{ base_image_name }}
+base_image_url: https://download.opensuse.org/tumbleweed/appliances/{{ base_image_name }}
+base_image_sha: 6f2b23cbccb9f40efab7da4ff8e175136e74e555b05fb96307828ed35051ec59 
+libvirt_pool_dir: "/var/lib/libvirt/images"
+vm_name: f34-dev
+vm_vcpus: 2
+vm_ram_mb: 2048
+vm_net: default
+vm_root_pass: Those who Fear the Light 
+cleanup_tmp: no
+ssh_key: /root/.ssh/id_rsa.pub
