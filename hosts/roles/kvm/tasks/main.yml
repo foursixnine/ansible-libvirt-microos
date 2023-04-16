@@ -1,16 +1,35 @@
 ---
 # tasks file for kvm
 - name: Ensure requirements in place
-  package:
+  community.general.zypper:
     name:
       - libvirt
       - libvirt-daemon-qemu
       - qemu-tools
       - virt-install
       - guestfs-tools
-      - libvirt-python
+      - python3dist(libvirt-python)
+      - python3dist(lxml)
+      - NetworkManager-ovs
     state: present
-  become: yes
+  register: packages 
+
+- name: Unconditionally reboot the machine with all defaults
+  ansible.builtin.reboot:
+  when: packages is changed 
+
+- name: Start services
+  block:
+  - name: libvirtd daemon
+    ansible.builtin.systemd:
+      name: libvirtd 
+      enabled: true
+      state: started
+  - name: Ensure that a given network will be started at boot
+    community.libvirt.virt_net:
+      state: active
+      autostart: yes
+      name: default
 
 - name: Get VMs list
   community.libvirt.virt:

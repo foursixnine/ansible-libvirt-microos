@@ -1,0 +1,8 @@
+all:
+  children:
+    baremetal:
+     children:
+       vmhost:
+         hosts:
+           ninlil.zarate.co:
+             ansible_user: root
