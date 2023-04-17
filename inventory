@@ -1,0 +1,8 @@
+all:
+  children:
+    baremetal:
+     children:
+       vmhost:
+         hosts:
+           your.host.here:
+             ansible_user: root

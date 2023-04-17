@@ -1,0 +1,33 @@
+- name: Deploys VM based on cloud image
+  hosts: vmhost 
+  gather_facts: yes
+  vars:
+    pool_dir: "/var/lib/libvirt/images"
+    vm: example-k3s-vm01
+    vcpus: 8
+    ram_mb: 16384 
+    hdd_gb: 250
+    cleanup: no
+    net: default
+    ssh_pub_key: "~/.ssh/id_rsa.pub"
+    console_password: "1234"
+    # echo opensuse | openssl passwd -salt opensuse -6 -stdin
+    root_pass: "$6$opensuse$buZiz6ASCQH8UkdSE0xi2/hw8k3oRuDB5uFtfza2.sv2D1ieGnCO29V82t.h3VkY.MJiXtfHlsJpcWb03OlVI1" 
+    ssh_pub_key_string: "your key goes here"
+
+  tasks:
+    - name: KVM Provision role
+      include_role:
+        name: kvm
+      vars:
+        libvirt_pool_dir: "{{ pool_dir }}"
+        vm_name: "{{ vm }}"
+        vm_vcpus: "{{ vcpus }}"
+        vm_ram_mb: "{{ ram_mb }}"
+        vm_net: "{{ net }}"
+        cleanup_tmp: "{{ cleanup }}"
+        ssh_key: "{{ ssh_pub_key } }"
+        spice_password: "{{ console_password }}"
+        vm_root_pass: "{{ root_pass }}"
+        vm_hdd_size: "{{ hdd_gb }}G"
+        ssh_key_string: "{{ ssh_pub_key_string }}"

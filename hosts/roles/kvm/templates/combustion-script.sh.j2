@@ -1,0 +1,91 @@
+#!/bin/bash
+# taken from https://code.opensuse.org/adathor/combustion-dotconf/tree/main
+set -e
+
+## Note:
+## To check if the k3s installation has been finished
+## issue the "systemctl status k3sinstall.service" command.
+## To finish the installation you must reboot!
+## Once booted you can check the node with:
+## "kubectl get nodes"
+## For more check out:
+## "https://documentation.suse.com/trd/kubernetes/pdf/kubernetes_ri_k3s-slemicro_color_en.pdf"
+
+## Enable network
+# combustion: network
+## Post output on stdout
+exec > >(exec tee -a /dev/tty0) 2>&1
+## Add password for root user
+## SUSE documentation recommends openssl passwd -6, mkpasswd --method=sha-512 works as well
+## The default password that is set here is: linux
+ROOT_USER_PASSWORD='{{ vm_root_pass }}'
+SSH_ROOT_PUBLIC_KEY=ssh_key.pub
+SSH_ROOT_PUBLIC_KEY_OTHERS="{{ ssh_key_string }}"
+SSH_USER_PUBLIC_KEY=ssh_key.pub
+USER_REQUIRED_PACKAGES='patterns-microos-cockpit htop cockpit bash-completion tmux neovim'
+#CREATE_NORMAL_USER=  ## Add the username here to create a user, leave empty to skip creating one
+#NORMAL_USER_PASSWORD='$6$NWOL.CUVsuDtWZhb$rs8JeaNfx/ZL.OvQPYugAbXAUA67va.geqLa96zNo8no/PqxvFDICB.Gb2BFlIZoTx095qHSkRevKIyy1/AKj.'
+NODE_HOSTNAME="{{ vm_name }}"  ## If you want to add additional nodes to a cluster you must set the hostname or nodes will not be able to join
+## K3s configuration
+INSTALL_K3S_UPSTREAM=true  ## Set to false if you want to use the openSUSE rpm, also add the package name to USER_REQUIRED_PACKAGES
+INSTALL_K3S_EXEC='server --cluster-init --write-kubeconfig-mode=644'
+
+## Set hostname
+echo $NODE_HOSTNAME > /etc/hostname
+
+## Mount /var and /home so user can be created smoothly
+if [ "$CREATE_NORMAL_USER" ]
+then
+	mount /var && mount /home
+fi
+
+## Set root password
+echo root:$ROOT_USER_PASSWORD | chpasswd -e
+## Add ssh public key as authorized key for the root user
+mkdir -pm700 /root/.ssh/
+#cat $SSH_ROOT_PUBLIC_KEY >> /root/.ssh/authorized_keys
+echo $SSH_ROOT_PUBLIC_KEY_OTHERS >> /root/.ssh/authorized_keys
+
+
+## Install required packages
+if [ "$USER_REQUIRED_PACKAGES" ]
+then
+	zypper ref && zypper --non-interactive install $USER_REQUIRED_PACKAGES
+fi
+
+if $INSTALL_K3S_UPSTREAM; then
+	## Download and install the latest k3s installer
+	curl -L --output k3s_installer.sh https://get.k3s.io && install -m755 k3s_installer.sh /usr/bin/
+	## Create a systemd unit that installs k3s if not installed yet
+	cat <<- EOF > /etc/systemd/system/install-rancher-k3s.service
+	[Unit]
+	Description=Run K3s installer
+	Wants=network-online.target
+	After=network.target network-online.target
+	ConditionPathExists=/usr/bin/k3s_installer.sh
+	ConditionPathExists=!/usr/local/bin/k3s
+	[Service]
+	Type=forking
+	TimeoutStartSec=120
+	Environment="INSTALL_K3S_EXEC=$INSTALL_K3S_EXEC"
+	ExecStart=/usr/bin/k3s_installer.sh
+	RemainAfterExit=yes
+	KillMode=process
+	[Install]
+	WantedBy=multi-user.target
+	EOF
+fi
+
+## Enable services
+systemctl enable cockpit.socket
+systemctl enable sshd
+systemctl enable install-rancher-k3s.service
+
+## Unmount var and home
+if [ "$CREATE_NORMAL_USER" ]
+then
+	umount /var && umount /home
+fi
+
+echo "Configured with Combustion" > /etc/issue.d/combustion
+
