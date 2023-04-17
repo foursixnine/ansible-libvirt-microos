@@ -3,12 +3,14 @@
   gather_facts: yes
   vars:
     pool_dir: "/var/lib/libvirt/images"
-    vm: istabl-antar01 
+    vm: istabl-antar01
     vcpus: 8
     ram_mb: 16384 
+    hdd_gb: 250
     cleanup: no
     net: default
     ssh_pub_key: "~/.ssh/id_rsa.pub"
+    console_password: "1234"
 
   tasks:
     - name: KVM Provision role
@@ -21,4 +23,7 @@
         vm_ram_mb: "{{ ram_mb }}"
         vm_net: "{{ net }}"
         cleanup_tmp: "{{ cleanup }}"
-        ssh_key: "{{ ssh_pub_key }}"
+        ssh_key: "{{ ssh_pub_key } }"
+        spice_password: "{{ console_password }}"
+        vm_root_pass: "$6$rounds=1000000$yAlIgtQbMB/4t2Fp$XuYSn2PKRvNDBDngfU1z96cZLYDHIZZ1qx3t9uLq/H3GC8nPRRXq0sVnzRvYFGc6RjX76UqWIDq4A1kciVWue0" 
+        vm_hdd_size: "{{ hdd_gb }}G"

@@ -5,31 +5,41 @@
     name:
       - libvirt
       - libvirt-daemon-qemu
+      - libvirt-client-qemu
+      - qemu-chardev-spice
       - qemu-tools
+      - qemu-hw-display-virtio-gpu
+      - qemu-hw-display-virtio-gpu-pci
       - virt-install
       - guestfs-tools
       - python3dist(libvirt-python)
       - python3dist(lxml)
       - NetworkManager-ovs
+      - libguestfs
     state: present
-  register: packages 
+  register: packages
 
 - name: Unconditionally reboot the machine with all defaults
   ansible.builtin.reboot:
-  when: packages is changed 
+  when: packages is changed
 
 - name: Start services
   block:
-  - name: libvirtd daemon
-    ansible.builtin.systemd:
-      name: libvirtd 
-      enabled: true
-      state: started
-  - name: Ensure that a given network will be started at boot
-    community.libvirt.virt_net:
-      state: active
-      autostart: yes
-      name: default
+    - name: libvirtd daemon
+      ansible.builtin.systemd:
+        name: libvirtd
+        enabled: true
+        state: started
+    - name: Guests services
+      ansible.builtin.systemd:
+        name: libvirt-guests
+        enabled: true
+        state: started
+    - name: Ensure that a given network will be started at boot
+      community.libvirt.virt_net:
+        state: active
+        autostart: yes
+        name: default
 
 - name: Get VMs list
   community.libvirt.virt:
@@ -37,36 +47,41 @@
   register: existing_vms
   changed_when: no
 
-- name: Create VM if not exists
-  block:  
-  - name: Download base image
-    get_url:
-      url: "{{ base_image_url }}"
-      dest: "/tmp/{{ base_image_name }}"
-      checksum: "sha256:{{ base_image_sha }}"
-  - name: Copy base image to libvirt directory
-    copy:
-      dest: "{{ libvirt_pool_dir }}/{{ vm_name }}.qcow2"
-      src: "/tmp/{{ base_image_name }}"
-      force: no
-      remote_src: yes 
-      mode: 0660
-    register: copy_results
-# Since we're gonna use ignition/whatever, this should not be needed  
-# This could also be used as template for the combustion thingie
-#  - name: Configure the image
-#    command: |
-#      virt-customize -a {{ libvirt_pool_dir }}/{{ vm_name }}.qcow2 \
-#      --hostname {{ vm_name }} \
-#      --root-password password:{{ vm_root_pass }} \
-#      --ssh-inject 'root:file:{{ ssh_key }}' \
-#      --uninstall cloud-init --selinux-relabel
-#    when: copy_results is changed
-  - name: Define vm
-    community.libvirt.virt:
-      command: define
-      xml: "{{ lookup('template', 'vm-template.xml.j2') }}"
-    when: "vm_name not in existing_vms.list_vms"
+- name: Create new VM
+  block:
+    - name: Download base image
+      get_url:
+        url: "{{ base_image_url }}"
+        dest: "/tmp/{{ base_image_name }}"
+          #checksum: "sha256:{{ base_image_sha }}"
+    - name: Copy base image to libvirt directory
+      copy:
+        dest: "{{ libvirt_pool_dir }}/{{ vm_name }}.qcow2"
+        src: "/tmp/{{ base_image_name }}"
+        force: no
+        remote_src: yes
+        mode: 0660
+      register: copy_results
+    - name: Resize vm image
+      ansible.builtin.command: /usr/bin/qemu-img resize "{{ libvirt_pool_dir }}/{{ vm_name }}.qcow2" "{{ vm_hdd_size }}" 
+    - name: Setup Combustion
+      ansible.builtin.template:
+        src: combustion-script.sh.j2
+        dest: "/var/lib/libvirt/images/{{ vm_name }}-config.ign"
+      when: "vm_name not in existing_vms.list_vms"
+    - name: Define vm
+      community.libvirt.virt:
+        command: define 
+        guest: "{{ vm_name }}"
+        autostart: true
+        xml: "{{ lookup('template', 'vm-template.xml.j2') }}"
+      when: "vm_name not in existing_vms.list_vms"
+  rescue:
+    - name: Destroying the machine
+      ansible.builtin.command: virsh undefine --remove-all-storage --nvram --wipe-storage "{{ vm_name }}"
+    - name: Notify
+      ansible.builtin.debug:
+        msg: "Task {{ ansible_failed_task.name }} has result {{ ansible_failed_task.result }}"
 
 - name: Ensure VM is started
   community.libvirt.virt:
@@ -74,7 +89,7 @@
     state: running
   register: vm_start_results
   until: "vm_start_results is success"
-  retries: 15
+  retries: 1
   delay: 2
 
 - name: Ensure temporary file is deleted

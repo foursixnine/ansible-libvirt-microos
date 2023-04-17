@@ -1,14 +1,36 @@
 <domain type='kvm'>
   <name>{{ vm_name }}</name>
+  <metadata>
+    <libosinfo:libosinfo xmlns:libosinfo="http://libosinfo.org/xmlns/libvirt/domain/1.0">
+      <libosinfo:os id="http://opensuse.org/opensuse/tumbleweed"/>
+    </libosinfo:libosinfo>
+  </metadata>
   <memory unit='MiB'>{{ vm_ram_mb }}</memory>
   <vcpu placement='static'>{{ vm_vcpus }}</vcpu>
-  <os>
+  <os firmware="efi">
     <type arch='x86_64' machine='pc-q35-5.2'>hvm</type>
     <boot dev='hd'/>
   </os>
-  <cpu mode='host-model' check='none'/>
+  <features>
+    <acpi/>
+    <apic/>
+    <vmport state="off"/>
+  </features>
+  <cpu mode="host-passthrough" check="none" migratable="on"/>
+  <clock offset="utc">
+    <timer name="rtc" tickpolicy="catchup"/>
+    <timer name="pit" tickpolicy="delay"/>
+    <timer name="hpet" present="no"/>
+  </clock>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <pm>
+    <suspend-to-mem enabled="no"/>
+    <suspend-to-disk enabled="no"/>
+  </pm>
  <sysinfo type="fwcfg">
-   <entry name="opt/com.coreos/config" file="{{libvirt_pool_dir}}/config.ign"/>
+   <entry name="opt/org.opensuse.combustion/script" file="{{libvirt_pool_dir}}/{{ vm_name }}-config.ign"/>
  </sysinfo>
   <devices>
     <emulator>/usr/bin/qemu-system-x86_64</emulator>
@@ -18,16 +40,40 @@
       <target dev='vda' bus='virtio'/>
       <address type='pci' domain='0x0000' bus='0x05' slot='0x00' function='0x0'/>
     </disk>
+    <controller type="virtio-serial" index="0">
+      <address type="pci" domain="0x0000" bus="0x03" slot="0x00" function="0x0"/>
+    </controller>
     <interface type='network'>
       <source network='{{ vm_net }}'/>
       <model type='virtio'/>
       <address type='pci' domain='0x0000' bus='0x01' slot='0x00' function='0x0'/>
     </interface>
-    <channel type='unix'>
-      <target type='virtio' name='org.qemu.guest_agent.0'/>
-      <address type='virtio-serial' controller='0' bus='0' port='1'/>
+    <serial type="pty">
+      <target type="isa-serial" port="0">
+        <model name="isa-serial"/>
+      </target>
+    </serial>
+    <console type="pty">
+      <target type="serial" port="0"/>
+    </console>
+    <channel type="unix">
+      <target type="virtio" name="org.qemu.guest_agent.0"/>
+      <address type="virtio-serial" controller="0" bus="0" port="1"/>
     </channel>
-    <memballoon model='virtio'>
+    <input type="mouse" bus="ps2"/>
+    <input type="keyboard" bus="ps2"/>
+    <graphics type="spice" autoport="yes" listen="127.0.0.1" passwd="{{ spice_password}}">
+      <listen type="address" address="127.0.0.1"/>
+      <image compression="off"/>
+      <gl enable="no"/>
+    </graphics>
+    <audio id="1" type="none"/>
+    <video>
+      <model type="virtio" heads="1" primary="yes"/>
+      <address type="pci" domain="0x0000" bus="0x00" slot="0x01" function="0x0"/>
+    </video>
+    <watchdog model="itco" action="reset"/>
+    <memballoon model="virtio">
       <address type='pci' domain='0x0000' bus='0x06' slot='0x00' function='0x0'/>
     </memballoon>
     <rng model='virtio'>
