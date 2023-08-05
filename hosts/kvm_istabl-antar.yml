@@ -1,17 +1,22 @@
+---
 - name: Deploys VM based on cloud image
-  hosts: vmhost 
+  hosts: vmhost
   gather_facts: yes
   vars:
     pool_dir: "/var/lib/libvirt/images"
     vm: istabl-antar01
     vcpus: 8
-    ram_mb: 16384 
+    ram_mb: 16384
     hdd_gb: 250
     cleanup: no
     net: default
     ssh_pub_key: "~/.ssh/id_rsa.pub"
-    console_password: "1234"
-
+    # date -R | tee | base64 -i - | tee | openssl passwd -table -stdin
+    # VGh1LCAy        GHxLW7iVQ2xbA
+    console_password: "GHxLW7iVQ2xbA"
+    # echo opensuse | openssl passwd -salt opensuse -6 -stdin
+    root_pass: "$6$opensuse$buZiz6ASCQH8UkdSE0xi2/hw8k3oRuDB5uFtfza2.sv2D1ieGnCO29V82t.h3VkY.MJiXtfHlsJpcWb03OlVI1"
+    ssh_key_string: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALmRZZ436zrsW8Tr3hSyAucz99E8GzZn9orr1TjfQo4 foursixnine@rigisamus.ego.zarate.co"
   tasks:
     - name: KVM Provision role
       include_role:
@@ -25,5 +30,6 @@
         cleanup_tmp: "{{ cleanup }}"
         ssh_key: "{{ ssh_pub_key } }"
         spice_password: "{{ console_password }}"
-        vm_root_pass: "$6$rounds=1000000$yAlIgtQbMB/4t2Fp$XuYSn2PKRvNDBDngfU1z96cZLYDHIZZ1qx3t9uLq/H3GC8nPRRXq0sVnzRvYFGc6RjX76UqWIDq4A1kciVWue0" 
+        vm_root_pass: "{{ root_pass }}"
         vm_hdd_size: "{{ hdd_gb }}G"
+        ssh_key_string: "{{ ssh_pub_key_string }}"

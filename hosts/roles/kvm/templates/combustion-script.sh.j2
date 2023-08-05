@@ -20,7 +20,7 @@ exec > >(exec tee -a /dev/tty0) 2>&1
 ## The default password that is set here is: linux
 ROOT_USER_PASSWORD='{{ vm_root_pass }}'
 SSH_ROOT_PUBLIC_KEY=ssh_key.pub
-SSH_ROOT_PUBLIC_KEY_OTHERS="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALmRZZ436zrsW8Tr3hSyAucz99E8GzZn9orr1TjfQo4 foursixnine@rigisamus.ego.zarate.co"
+SSH_ROOT_PUBLIC_KEY_OTHERS="{{ ssh_key_string }}"
 SSH_USER_PUBLIC_KEY=ssh_key.pub
 USER_REQUIRED_PACKAGES='patterns-microos-cockpit htop cockpit bash-completion tmux neovim'
 #CREATE_NORMAL_USER=  ## Add the username here to create a user, leave empty to skip creating one
