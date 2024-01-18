@@ -13,4 +13,4 @@ cleanup_tmp: no
 ssh_key_string: "your key goes here"
 ssh_key: /root/.ssh/id_rsa.pub
 spice_password: "1234"
-hdd_gb: 40 
+hdd_gb: 40
