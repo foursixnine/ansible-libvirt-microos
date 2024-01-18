@@ -8,27 +8,10 @@
   <memory unit='MiB'>{{ vm_ram_mb }}</memory>
   <vcpu placement='static'>{{ vm_vcpus }}</vcpu>
   <os firmware="efi">
-    <type arch='x86_64' machine='pc-q35-5.2'>hvm</type>
+    <type arch='x86_64' machine='host'>hvm</type>
     <boot dev='hd'/>
   </os>
-  <features>
-    <acpi/>
-    <apic/>
-    <vmport state="off"/>
-  </features>
-  <cpu mode="host-passthrough" check="none" migratable="on"/>
-  <clock offset="utc">
-    <timer name="rtc" tickpolicy="catchup"/>
-    <timer name="pit" tickpolicy="delay"/>
-    <timer name="hpet" present="no"/>
-  </clock>
-  <on_poweroff>destroy</on_poweroff>
-  <on_reboot>restart</on_reboot>
-  <on_crash>destroy</on_crash>
-  <pm>
-    <suspend-to-mem enabled="no"/>
-    <suspend-to-disk enabled="no"/>
-  </pm>
+  <cpu mode='host-passthrough' check='none'/>
  <sysinfo type="fwcfg">
    <entry name="opt/org.opensuse.combustion/script" file="{{libvirt_pool_dir}}/{{ vm_name }}-config.ign"/>
  </sysinfo>
