@@ -1,0 +1,14 @@
+<network connections='1'>
+<name>{{ vm_net_public }}</name>
+  <forward dev='{{ vm_routing_device }}' mode='route'>
+    <interface dev='{{ vm_routing_device }}'/>
+  </forward>
+  <bridge name='virbr0' stp='on' delay='0'/>
+  <ip address='1.1.1.1' netmask='255.255.255.255'>
+    <dhcp>
+      <range start='1.1.1.2' end='1.1.1.10'/>
+    </dhcp>
+  </ip>
+  <ip family='ipv6' address='2a01:' prefix='64'>
+  </ip>
+</network>
